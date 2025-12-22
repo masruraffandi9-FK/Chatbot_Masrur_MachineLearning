@@ -9,10 +9,32 @@ app = Flask(__name__)
 # Nanti kita setting kuncinya di dashboard Vercel
 GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
 
-# Konfigurasi model jika API Key ditemukan
+# --- KONFIGURASI GEMINI ---
 if GOOGLE_API_KEY:
     genai.configure(api_key=GOOGLE_API_KEY)
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    # Menggunakan model 1.5-flash dengan konfigurasi standar
+    model = genai.GenerativeModel(
+        model_name='models/gemini-1.5-flash'
+    )
+
+@app.route('/chat', methods=['POST'])
+def chat():
+    if not GOOGLE_API_KEY:
+        return jsonify({"response": "Error: API Key belum di-setting!"})
+
+    data = request.get_json()
+    user_message = data.get('message', '')
+
+    try:
+        # Gunakan generate_content secara langsung (lebih stabil untuk Vercel)
+        response = model.generate_content(user_message)
+        bot_reply = response.text
+    except Exception as e:
+        # Jika masih error, coba gunakan alternatif model 'gemini-pro' 
+        # karena terkadang region server Vercel mempengaruhi ketersediaan model
+        bot_reply = f"Maaf, terjadi kesalahan teknis pada model AI: {str(e)}"
+
+    return jsonify({"response": bot_reply})
 
 # --- RUTE WEBSITE ---
 
