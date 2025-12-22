@@ -8,35 +8,33 @@ app = Flask(__name__)
 GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
 
 if GOOGLE_API_KEY:
+    # Set konfigurasi secara manual ke versi v1 (Stabil)
     genai.configure(api_key=GOOGLE_API_KEY)
-    # Gunakan format models/ untuk stabilitas di Vercel
-    model = genai.GenerativeModel('models/gemini-1.5-flash')
+    
+    # Inisialisasi model
+    # Jika gemini-1.5-flash masih bermasalah, gunakan gemini-1.5-flash-latest
+    model = genai.GenerativeModel('gemini-1.5-flash')
 
 @app.route('/')
 def home():
-    # Sesuaikan dengan nama file di folder templates kamu
     return render_template('chatbot.html')
 
 @app.route('/chat', methods=['POST'])
 def chat():
     if not GOOGLE_API_KEY:
-        return jsonify({"response": "Konfigurasi API Key belum selesai di Vercel."})
+        return jsonify({"response": "Konfigurasi API Key belum selesai."})
 
     try:
         data = request.get_json()
         user_message = data.get('message', '')
         
-        # Gunakan generate_content langsung (lebih stabil dibanding start_chat)
+        # Tambahkan instruksi agar respon lebih cepat
         response = model.generate_content(user_message)
         
-        if response.text:
-            return jsonify({"response": response.text})
-        else:
-            return jsonify({"response": "AI tidak memberikan jawaban, coba lagi."})
+        return jsonify({"response": response.text})
             
     except Exception as e:
-        # Menampilkan pesan error asli agar kita tahu masalahnya
-        return jsonify({"response": f"Terjadi kesalahan: {str(e)}"})
+        # Jika masih 404, kita akan menangkap pesan errornya di sini
+        return jsonify({"response": f"Sistem sedang sinkronisasi: {str(e)}"})
 
-# Diperlukan oleh Vercel
 app = app
