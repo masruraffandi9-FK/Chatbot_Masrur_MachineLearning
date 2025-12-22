@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chatbot</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .chat-container { width: 400px; height: 600px; background: white; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow: hidden; }
+        .header { background: #0084ff; color: white; padding: 15px; text-align: center; font-weight: bold; }
+        .chat-box { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .message { padding: 10px 15px; border-radius: 20px; max-width: 80%; line-height: 1.4; font-size: 14px; }
+        .user-msg { background: #0084ff; color: white; align-self: flex-end; border-bottom-right-radius: 5px; }
+        .bot-msg { background: #e4e6eb; color: black; align-self: flex-start; border-bottom-left-radius: 5px; }
+        .input-area { display: flex; padding: 10px; border-top: 1px solid #ddd; background: #fff; }
+        input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 20px; outline: none; }
+        button { background: #0084ff; color: white; border: none; padding: 10px 20px; margin-left: 10px; border-radius: 20px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #0073e6; }
+        .loading { font-style: italic; color: #888; font-size: 12px; margin-left: 10px; display: none;}
+    </style>
+</head>
+<body>
+
+<div class="chat-container">
+    <div class="header">Chatbot Pintar (Gemini)</div>
+    <div class="chat-box" id="chatBox">
+        <div class="message bot-msg">Halo! Saya AI Chatbot. Mau tanya apa hari ini?</div>
+    </div>
+    <div class="loading" id="loading">Sedang mengetik...</div>
+    <div class="input-area">
+        <input type="text" id="userInput" placeholder="Ketik pesan..." onkeypress="if(event.key==='Enter') sendMessage()">
+        <button onclick="sendMessage()">Kirim</button>
+    </div>
+</div>
+
+<script>
+    async function sendMessage() {
+        const inputField = document.getElementById('userInput');
+        const message = inputField.value.trim();
+        if (!message) return;
+
+        // Tampilkan pesan user
+        addMessage(message, 'user-msg');
+        inputField.value = '';
+
+        // Tampilkan loading
+        document.getElementById('loading').style.display = 'block';
+
+        try {
+            const response = await fetch('/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: message })
+            });
+            const data = await response.json();
+            
+            // Tampilkan balasan bot
+            document.getElementById('loading').style.display = 'none';
+            addMessage(data.response, 'bot-msg');
+        } catch (error) {
+            document.getElementById('loading').style.display = 'none';
+            addMessage("Error: Gagal menghubungi server.", 'bot-msg');
+        }
+    }
+
+    function addMessage(text, className) {
+        const chatBox = document.getElementById('chatBox');
+        const div = document.createElement('div');
+        div.className = `message ${className}`;
+        // Ganti baris baru (\n) menjadi <br> agar rapi
+        div.innerHTML = text.replace(/\n/g, '<br>');
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight; // Auto scroll ke bawah
+    }
+</script>
+
+</body>
+</html>
