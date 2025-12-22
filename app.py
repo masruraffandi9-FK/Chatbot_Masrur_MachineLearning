@@ -12,7 +12,7 @@ GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
 # Konfigurasi model jika API Key ditemukan
 if GOOGLE_API_KEY:
     genai.configure(api_key=GOOGLE_API_KEY)
-    model = genai.GenerativeModel('gemini-pro')
+    model = genai.GenerativeModel('gemini-1.5-flash')
 
 # --- RUTE WEBSITE ---
 
