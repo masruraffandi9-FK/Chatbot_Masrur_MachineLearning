@@ -18,31 +18,35 @@ def chat():
 
     user_message = request.get_json().get('message', '')
     
-    # URL API Google Gemini Resmi (Versi v1 - Stabil)
-    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={API_KEY}"
+    # KITA COBA GEMINI 1.5 PRO (Biasanya lebih stabil di berbagai region)
+    # Jika gagal, URL ini mudah diganti ke gemini-1.0-pro
+    model_name = "gemini-1.5-pro" 
+    url = f"https://generativelanguage.googleapis.com/v1/models/{model_name}:generateContent?key={API_KEY}"
     
     headers = {'Content-Type': 'application/json'}
-    
-    # Struktur data sesuai dokumentasi resmi Google
     payload = {
-        "contents": [{
-            "parts": [{"text": user_message}]
-        }]
+        "contents": [{"parts": [{"text": user_message}]}]
     }
 
     try:
         response = requests.post(url, headers=headers, json=payload)
         response_data = response.json()
         
-        # Ambil teks balasan dari struktur JSON Google
         if response.status_code == 200:
             bot_reply = response_data['candidates'][0]['content']['parts'][0]['text']
             return jsonify({"response": bot_reply})
         else:
-            error_msg = response_data.get('error', {}).get('message', 'Kesalahan API')
-            return jsonify({"response": f"API Error: {error_msg}"})
+            # Jika 1.5-pro tidak ada, kita coba tembak gemini-1.0-pro sebagai usaha terakhir
+            url_fallback = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.0-pro:generateContent?key={API_KEY}"
+            res_fall = requests.post(url_fallback, headers=headers, json=payload)
+            if res_fall.status_code == 200:
+                bot_reply = res_fall.json()['candidates'][0]['content']['parts'][0]['text']
+                return jsonify({"response": bot_reply})
+            
+            error_msg = response_data.get('error', {}).get('message', 'Model tidak tersedia di region kamu.')
+            return jsonify({"response": f"Pesan dari Google: {error_msg}"})
             
     except Exception as e:
-        return jsonify({"response": f"Koneksi gagal: {str(e)}"})
+        return jsonify({"response": f"Masalah koneksi: {str(e)}"})
 
 app = app
