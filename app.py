@@ -1,17 +1,11 @@
 import os
+import requests
 from flask import Flask, request, jsonify, render_template
-import google.generativeai as genai
 
 app = Flask(__name__)
 
 # Ambil API Key dari Vercel Environment Variables
-GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
-
-if GOOGLE_API_KEY:
-    genai.configure(api_key=GOOGLE_API_KEY)
-    # Gunakan 'gemini-1.5-flash-latest' atau 'gemini-pro' sebagai cadangan
-    # Terkadang 'gemini-1.5-flash' saja dianggap tidak ada di beberapa titik server
-    model = genai.GenerativeModel('gemini-1.5-flash-latest')
+API_KEY = os.getenv('GOOGLE_API_KEY')
 
 @app.route('/')
 def home():
@@ -19,27 +13,36 @@ def home():
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    if not GOOGLE_API_KEY:
-        return jsonify({"response": "API Key tidak terbaca."})
+    if not API_KEY:
+        return jsonify({"response": "API Key belum diatur di Vercel."})
+
+    user_message = request.get_json().get('message', '')
+    
+    # URL API Google Gemini Resmi (Versi v1 - Stabil)
+    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={API_KEY}"
+    
+    headers = {'Content-Type': 'application/json'}
+    
+    # Struktur data sesuai dokumentasi resmi Google
+    payload = {
+        "contents": [{
+            "parts": [{"text": user_message}]
+        }]
+    }
 
     try:
-        data = request.get_json()
-        user_message = data.get('message', '')
+        response = requests.post(url, headers=headers, json=payload)
+        response_data = response.json()
         
-        # Tambahkan safety_settings jika perlu, tapi untuk sekarang kita buat simpel
-        response = model.generate_content(user_message)
-        
-        # Ambil teksnya, pastikan tidak kosong
-        bot_reply = response.text if response.text else "Maaf, AI tidak bisa menjawab itu."
-        return jsonify({"response": bot_reply})
+        # Ambil teks balasan dari struktur JSON Google
+        if response.status_code == 200:
+            bot_reply = response_data['candidates'][0]['content']['parts'][0]['text']
+            return jsonify({"response": bot_reply})
+        else:
+            error_msg = response_data.get('error', {}).get('message', 'Kesalahan API')
+            return jsonify({"response": f"API Error: {error_msg}"})
             
     except Exception as e:
-        # Jika 'gemini-1.5-flash-latest' gagal, coba ganti ke 'gemini-pro' secara otomatis
-        try:
-            fallback_model = genai.GenerativeModel('gemini-pro')
-            response = fallback_model.generate_content(user_message)
-            return jsonify({"response": response.text})
-        except:
-            return jsonify({"response": f"Masih sinkronisasi API: {str(e)}"})
+        return jsonify({"response": f"Koneksi gagal: {str(e)}"})
 
 app = app
